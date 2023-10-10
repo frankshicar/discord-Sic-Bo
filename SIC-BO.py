@@ -20,6 +20,7 @@ class MyClient(discord.Client):
     async def setup_hook(self):
         self.tree.copy_global_to(guild=MY_GUILD)
         await self.tree.sync(guild=MY_GUILD)
+    
 
 
 #下拉式表單
@@ -130,149 +131,119 @@ multipliers = {
 def roll_dice():
     return [random.randint(1, 6) for _ in range(3)]
 
-    # global base_points
-
-    # if amount <= 0:
-    #     await ctx.send("下注金額必須大於零。")
-    #     return
-
-    # if bet_type not in multipliers:
-    #     await ctx.send("無效的下注類型。")
-    #     return
-
-    # if base_points < amount:
-    #     await ctx.send("你的基礎點數不足以進行這個下注。")
-    #     return
 
 
 #比大小判斷式
 @client.tree.command()
-async def 大小(interaction, bet_type: str, amount: int):
+async def 大小(interaction, 大或小: str, 賭資: int):
     global base_points
     dice_roll = roll_dice()
     total = sum(dice_roll)
-    if amount <= 0:
+    embed = discord.Embed(
+        # title='骰寶歸則',
+        # description='This is a rule',   
+        colour=discord.Colour.purple()
+    )
+    if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
-
-    if bet_type not in multipliers:
-        await interaction.response.send_message("無效的下注類型。")
-        return
-
-    if base_points < amount:
+    if base_points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return
-    if bet_type == '大' and total >= 11 and total <= 17:
-        base_points += int(amount * multipliers[bet_type])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
-    elif bet_type == '小' and total >= 4 and total <= 10:
-        base_points += int(amount * multipliers[bet_type])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+    if 大或小 == '大' and total >= 11 and total <= 17:
+        base_points += int(賭資 * multipliers[大或小])  # 贏得下注金額,加上賠率獎勵
+        embed.add_field(name="大小", 
+                    value = f"你猜的總和是 {大或小}\n骰子點數為: {dice_roll}, 總點數為: {total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。", 
+                    inline=False) 
+        # await interaction.response.send_message(f"你猜的總和是{大或小}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+    elif 大或小 == '小' and total >= 4 and total <= 10:
+        base_points += int(賭資 * multipliers[大或小])  # 贏得下注金額,加上賠率獎勵
+        await interaction.response.send_message(f"你猜的總和是{大或小}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     else:
-        base_points -= amount  # 輸掉下注金額
-        await interaction.response.send_message(f"骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        base_points -= 賭資  # 輸掉下注金額
+        await interaction.response.send_message(f"你猜的總和是{大或小}\n骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+    await interaction.response.send_message(embed=embed)
 
-
-#全為判斷式
+#全圍判斷式
 @client.tree.command()
-async def 全圍(interaction, bet_value: int, amount: int):
+async def 全圍(interaction, 賭資: int):
     global base_points
     dice_roll = roll_dice()
-    if amount <= 0:
+    if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
-
-    if bet_value not in multipliers:
-        await interaction.response.send_message("無效的下注類型。")
-        return
-
-    if base_points < amount:
+    if base_points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return
-    if bet_value == dice_roll[0] == dice_roll[1] == dice_roll[2]:
-        base_points += int(amount * multipliers[bet_value])  # 贏得下注金額,加上賠率獎勵
+    if dice_roll[0] == dice_roll[1] == dice_roll[2]:
+        base_points += int(賭資 * multipliers['全圍'])  # 贏得下注金額,加上賠率獎勵
         await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     else:
-        base_points -= amount  # 輸掉下注金額
+        base_points -= 賭資  # 輸掉下注金額
         await interaction.response.send_message(f"骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
 
 
 
 #總和判斷式
 @client.tree.command()
-async def 總和(interaction, bet_value: int, amount: int):
+async def 總和(interaction, 你指定的總和: int, 賭資: int):
     global base_points
     dice_roll = roll_dice()
     total = sum(dice_roll)
-    if amount <= 0:
+    if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
-
-    if bet_value not in multipliers:
-        await interaction.response.send_message("無效的下注類型。")
-        return
-
-    if base_points < amount:
+    if base_points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return
-    if bet_value == total:
-        base_points += int(amount * multipliers[bet_value])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+    if 你指定的總和 == total:
+        base_points += int(賭資 * multipliers[你指定的總和])  # 贏得下注金額,加上賠率獎勵
+        await interaction.response.send_message(f"你猜的總和是{你指定的總和}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     else:
-        base_points -= amount  # 輸掉下注金額
-        await interaction.response.send_message(f"骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        base_points -= 賭資  # 輸掉下注金額
+        await interaction.response.send_message(f"你猜的總和是{你指定的總和}\n骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
 
 
 #單雙判斷式
 @client.tree.command()
-async def 單雙(interaction, bet_type: str, amount: int):
+async def 單雙(interaction, 你指定的種類: str, 賭資: int):
     global base_points
     dice_roll = roll_dice()
     total = sum(dice_roll)
-    if amount <= 0:
+    if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
-
-    if bet_type not in multipliers:
-        await interaction.response.send_message("無效的下注類型。")
-        return
-
-    if base_points < amount:
+    if base_points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return
-    if bet_type == '雙' and total % 2 == 0:
-        base_points += int(amount * multipliers[bet_type])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
-    if bet_type == '單' and total % 2 == 1:
-        await interaction.response.send_message(f"骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+    if 你指定的種類 == '雙' and total % 2 == 0:
+        base_points += int(賭資 * multipliers[你指定的種類])  # 贏得下注金額,加上賠率獎勵
+        await interaction.response.send_message(f"你猜的是{你指定的種類}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+    if 你指定的種類 == '單' and total % 2 == 1:
+        await interaction.response.send_message(f"你猜的是{你指定的種類}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     else:
-        base_points -= amount  # 輸掉下注金額
-        await interaction.response.send_message(f"骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        base_points -= 賭資  # 輸掉下注金額
+        await interaction.response.send_message(f"你猜的是{你指定的種類}\n骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
 
 
 
 #圍骰判斷式
 @client.tree.command()
-async def 圍骰(interaction, bet_value: int, amount: int):
+async def 圍骰(interaction, 你指定的圍骰點數: int, 賭資: int):
     global base_points
     dice_roll = roll_dice()
-    if amount <= 0:
+    if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
-
-    if bet_value not in multipliers:
-        await interaction.response.send_message("無效的下注類型。")
-        return
-
-    if base_points < amount:
+    if base_points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return
-    if dice_roll[0] == dice_roll[1] == dice_roll[2] and bet_value == str(dice_roll[0]):
-        base_points += int(amount * multipliers[bet_value])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+    if dice_roll[0] == dice_roll[1] == dice_roll[2] == 你指定的圍骰點數:
+        base_points += int(賭資 * multipliers[你指定的圍骰點數])  # 贏得下注金額,加上賠率獎勵
+        await interaction.response.send_message(f"你猜的圍骰為：{你指定的圍骰點數}{你指定的圍骰點數}{你指定的圍骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     else:
-        base_points -= amount  # 輸掉下注金額
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        base_points -= 賭資  # 輸掉下注金額
+        await interaction.response.send_message(f"你猜的圍骰為：{你指定的圍骰點數}{你指定的圍骰點數}{你指定的圍骰點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
   
 
 
@@ -281,91 +252,97 @@ async def 圍骰(interaction, bet_value: int, amount: int):
 async def 對子(interaction, 你指定的對子點數: int, 賭資: int):
     global base_points
     dice_roll = roll_dice()
+    if 賭資 <= 0:
+        await interaction.response.send_message("下注金額必須大於零。")
+        return
+    if base_points < 賭資:
+        await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
+        return
     if dice_roll[0] == dice_roll[1] == 你指定的對子點數:
         base_points += int(賭資 * multipliers['對子'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")        
+        await interaction.response.send_message(f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")        
     elif dice_roll[0] == dice_roll[2] == 你指定的對子點數:
         base_points += int(賭資 * multipliers['對子'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")  
+        await interaction.response.send_message(f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")  
     elif dice_roll[1] == dice_roll[2] == 你指定的對子點數:
         base_points += int(賭資 * multipliers['對子'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")  
+        await interaction.response.send_message(f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")  
     else:
         base_points -= 賭資  # 輸掉下注金額
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        await interaction.response.send_message(f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
 
 
 
 #單骰判斷式
 @client.tree.command()
-async def 單骰(interaction, 你指定的點數: int, 賭資: int):
+async def 單骰(interaction, 你指定的單骰點數: int, 賭資: int):
     global base_points
     dice_roll = roll_dice()
-    if dice_roll[0] == 你指定的點數:
+    if 賭資 <= 0:
+        await interaction.response.send_message("下注金額必須大於零。")
+        return
+    if base_points < 賭資:
+        await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
+        return
+    if dice_roll[0] == 你指定的單骰點數:
         base_points += int(賭資 * multipliers['單骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")        
-    elif dice_roll[1] == 你指定的點數:
+        await interaction.response.send_message(f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")        
+    elif dice_roll[1] == 你指定的單骰點數:
         base_points += int(賭資 * multipliers['單骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")    
-    elif dice_roll[2] == 你指定的點數:
+        await interaction.response.send_message(f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")    
+    elif dice_roll[2] == 你指定的單骰點數:
         base_points += int(賭資 * multipliers['單骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")   
+        await interaction.response.send_message(f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")   
     else:
         base_points -= 賭資  # 輸掉下注金額
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        await interaction.response.send_message(f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
 
 
 
-#爽骰判斷式
+#雙骰判斷式
 @client.tree.command()
-async def 雙骰(interaction, 你指定的點數: int, 賭資: int):
+async def 雙骰(interaction, 你指定的雙骰點數: int, 賭資: int):
     global base_points
     dice_roll = roll_dice()
-    if dice_roll[0] == 你指定的點數 == dice_roll[1]:
+    if 賭資 <= 0:
+        await interaction.response.send_message("下注金額必須大於零。")
+        return
+    if base_points < 賭資:
+        await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
+        return
+    if dice_roll[0]== dice_roll[1] == 你指定的雙骰點數 :
         base_points += int(賭資 * multipliers['雙骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
-    elif dice_roll[0] == dice_roll[2] == 你指定的點數 :
+        await interaction.response.send_message(f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+    elif dice_roll[0] == dice_roll[2] == 你指定的雙骰點數 :
         base_points += int(賭資 * multipliers['雙骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
-    elif dice_roll[1] == dice_roll[2] == 你指定的點數  :
+        await interaction.response.send_message(f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+    elif dice_roll[1] == dice_roll[2] == 你指定的雙骰點數  :
         base_points += int(賭資 * multipliers['雙骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+        await interaction.response.send_message(f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     else:
         base_points -= 賭資  # 輸掉下注金額
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        await interaction.response.send_message(f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
 
 
 
 
 #全骰判斷式
 @client.tree.command()
-async def 全骰(interaction, 你指定的點數一: int, 你指定的點數二: int, 你指定的點數三: int, 賭資: int):
+async def 全骰(interaction, 你指定全骰的點數: int, 賭資: int):
     global base_points
     dice_roll = roll_dice()
-    if dice_roll[0] == 你指定的點數一 and dice_roll[1] == 你指定的點數二 & dice_roll[2] == 你指定的點數三:
+    if 賭資 <= 0:
+        await interaction.response.send_message("下注金額必須大於零。")
+        return
+    if base_points < 賭資:
+        await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
+        return
+    if dice_roll[0] == 你指定全骰的點數 == dice_roll[1] == dice_roll[2] :
         base_points += int(賭資 * multipliers['全骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")             
-    elif dice_roll[0] == 你指定的點數一 and dice_roll[2] == 你指定的點數二 & dice_roll[1] == 你指定的點數三:
-        base_points += int(賭資 * multipliers['全骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。") 
-    elif dice_roll[1] == 你指定的點數一 and dice_roll[0] == 你指定的點數二 & dice_roll[2] == 你指定的點數三:
-        base_points += int(賭資 * multipliers['全骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。") 
-    elif dice_roll[1] == 你指定的點數一 and dice_roll[2] == 你指定的點數二 & dice_roll[0] == 你指定的點數三:
-        base_points += int(賭資 * multipliers['全骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
-    elif dice_roll[2] == 你指定的點數一 and dice_roll[1] == 你指定的點數二 & dice_roll[0] == 你指定的點數三:
-        base_points += int(賭資 * multipliers['全骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
-    elif dice_roll[2] == 你指定的點數一 and dice_roll[0] == 你指定的點數二 & dice_roll[3] == 你指定的點數三:
-        base_points += int(賭資 * multipliers['全骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
-    elif dice_roll[1] == 你指定的點數一 and dice_roll[0] == 你指定的點數二 & dice_roll[2] == 你指定的點數三:
-        base_points += int(賭資 * multipliers['全骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+        await interaction.response.send_message(f"你猜的全骰點數為：{你指定全骰的點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")             
     else:
         base_points -= 賭資  # 輸掉下注金額
-        await interaction.response.send_message(f"你猜的是:{你指定的點數一},{你指定的點數二},{你指定的點數三}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        await interaction.response.send_message(f"你猜的全骰點數為：{你指定全骰的點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
 
 
 
@@ -373,28 +350,34 @@ async def 全骰(interaction, 你指定的點數一: int, 你指定的點數二:
 @client.tree.command()
 async def 牌九式(interaction, 你指定的點數一: int, 你指定的點數二: int, 賭資: int):
     global base_points
-    dice_roll = roll_dice()    
+    dice_roll = roll_dice() 
+    if 賭資 <= 0:
+        await interaction.response.send_message("下注金額必須大於零。")
+        return
+    if base_points < 賭資:
+        await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
+        return   
     if dice_roll[0] == 你指定的點數一 and dice_roll[1] == 你指定的點數二:
         base_points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     elif dice_roll[0] == 你指定的點數一 and dice_roll[2] == 你指定的點數二:
         base_points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     elif dice_roll[1] == 你指定的點數一 and dice_roll[2] == 你指定的點數二:
         base_points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     elif dice_roll[0] == 你指定的點數二 and dice_roll[1] == 你指定的點數一:
         base_points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     elif dice_roll[0] == 你指定的點數二 and dice_roll[2] == 你指定的點數一 :
         base_points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     elif dice_roll[1] == 你指定的點數二 and dice_roll[2] == 你指定的點數一 :
         base_points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     else:
         base_points -= 賭資  # 輸掉下注金額
-        await interaction.response.send_message(f"你猜的是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
 
 
 
@@ -411,4 +394,4 @@ async def rule(interaction):
 
         
 
-client.run('MTEyMjkwMTQzNjk5NzU3ODc5Mg.GSP5iN.o3gvaEY_bUlz3kJkiDuvCpREy_vJ4a7_9rVG8w')
+client.run('MTEyMjkwMTQzNjk5NzU3ODc5Mg.GTvVtj.BlmQ_sGQWvl_-MP9St0-TvA24wcURK0kqV376o')
