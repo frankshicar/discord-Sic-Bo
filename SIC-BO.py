@@ -394,4 +394,4 @@ async def rule(interaction):
 
         
 
-client.run('MTEyMjkwMTQzNjk5NzU3ODc5Mg.GTvVtj.BlmQ_sGQWvl_-MP9St0-TvA24wcURK0kqV376o')
+client.run('token')
