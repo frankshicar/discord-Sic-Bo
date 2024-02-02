@@ -6,8 +6,9 @@ from discord import app_commands
 import datetime
 
 
-
+# API_KEY = AIzaSyBoC7nd0DCBg5RQSSmg4sh6YdE2whNfNfM
 MY_GUILD = discord.Object(id=991905864162226177)  # replace with your guild id
+tenor_api_key = "AIzaSyBoC7nd0DCBg5RQSSmg4sh6YdE2whNfNfM"
 
 base_points = 1000
 
@@ -136,6 +137,7 @@ def roll_dice():
 #比大小判斷式
 @client.tree.command()
 async def 大小(interaction, 大或小: str, 賭資: int):
+    
     global base_points
     dice_roll = roll_dice()
     total = sum(dice_roll)
@@ -144,6 +146,7 @@ async def 大小(interaction, 大或小: str, 賭資: int):
         # description='This is a rule',   
         colour=discord.Colour.purple()
     )
+
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
@@ -155,6 +158,8 @@ async def 大小(interaction, 大或小: str, 賭資: int):
         embed.add_field(name="大小", 
                     value = f"你猜的總和是 {大或小}\n骰子點數為: {dice_roll}, 總點數為: {total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。", 
                     inline=False) 
+        # embed.set_image(url="https://tenor.com/zh-TW/view/dice-roll-dice-dice1-gif-24573878")
+
         # await interaction.response.send_message(f"你猜的總和是{大或小}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     elif 大或小 == '小' and total >= 4 and total <= 10:
         base_points += int(賭資 * multipliers[大或小])  # 贏得下注金額,加上賠率獎勵
@@ -162,7 +167,9 @@ async def 大小(interaction, 大或小: str, 賭資: int):
     else:
         base_points -= 賭資  # 輸掉下注金額
         await interaction.response.send_message(f"你猜的總和是{大或小}\n骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
-    await interaction.response.send_message(embed=embed)
+    if not interaction.response.is_done():
+        await interaction.response.send_message(embed=embed)
+
 
 #全圍判斷式
 @client.tree.command()
@@ -394,4 +401,4 @@ async def rule(interaction):
 
         
 
-client.run('token')
+client.run('MTEyMjkwMTQzNjk5NzU3ODc5Mg.GzZDOV.2abIBqnaHbiEkASJp31ox0NOdfw70NszKdF3yo')
