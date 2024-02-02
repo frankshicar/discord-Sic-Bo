@@ -7,7 +7,7 @@ import datetime
 
 
 # API_KEY = AIzaSyBoC7nd0DCBg5RQSSmg4sh6YdE2whNfNfM
-MY_GUILD = discord.Object(id=991905864162226177)  # replace with your guild id
+MY_GUILD = discord.Object(id= 'add your guild id')  # replace with your guild id
 tenor_api_key = "AIzaSyBoC7nd0DCBg5RQSSmg4sh6YdE2whNfNfM"
 
 base_points = 1000
@@ -128,54 +128,68 @@ multipliers = {
     '雙': 1,
 }
 
+dice_gifs = {
+    1 : 'https://media.tenor.com/BZGKCKH8Wp4AAAAi/dice-roll-dice.gif',
+    2 :'https://media.tenor.com/VB6lPcSFiVgAAAAi/dice2-dice.gif',
+    3 : 'https://media.tenor.com/Pq2avhc9XvkAAAAi/dice-roll-dice.gif',
+    4 : 'https://media.tenor.com/cHiHze95e3cAAAAi/dice-roll-dice.gif',
+    5 : 'https://media.tenor.com/iBb9CXPm3icAAAAi/dice-roll-dice.gif',
+    6 : 'https://media.tenor.com/HcK7RSiai-AAAAAi/dice-roll-dice.gif'
+}
+
 #設定骰子
 def roll_dice():
     return [random.randint(1, 6) for _ in range(3)]
 
 
-
 #比大小判斷式
 @client.tree.command()
 async def 大小(interaction, 大或小: str, 賭資: int):
-    
     global base_points
     dice_roll = roll_dice()
     total = sum(dice_roll)
-    embed = discord.Embed(
-        # title='骰寶歸則',
-        # description='This is a rule',   
-        colour=discord.Colour.purple()
-    )
 
+    # 創建一個嵌入列表來存儲每個骰子的嵌入
+    embeds = []
+    for i, result in enumerate(dice_roll, start=1):
+        embed = discord.Embed(title=f"Dice {i} point is {result}", color=0x00ff00)
+        embed.set_thumbnail(url=dice_gifs[result])
+        embeds.append(embed)
+
+    # 判斷勝負並更新基礎點數
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
     if base_points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return
-    if 大或小 == '大' and total >= 11 and total <= 17:
-        base_points += int(賭資 * multipliers[大或小])  # 贏得下注金額,加上賠率獎勵
-        embed.add_field(name="大小", 
-                    value = f"你猜的總和是 {大或小}\n骰子點數為: {dice_roll}, 總點數為: {total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。", 
-                    inline=False) 
-        # embed.set_image(url="https://tenor.com/zh-TW/view/dice-roll-dice-dice1-gif-24573878")
 
-        # await interaction.response.send_message(f"你猜的總和是{大或小}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
-    elif 大或小 == '小' and total >= 4 and total <= 10:
-        base_points += int(賭資 * multipliers[大或小])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的總和是{大或小}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+    if (大或小 == '大' and total >= 11 and total <= 17) or (大或小 == '小' and total >= 4 and total <= 10):
+        base_points += int(賭資 * multipliers[大或小])
+        result_message = f"你猜的總和是{大或小}\n骰子點數為:{dice_roll}, 總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
     else:
-        base_points -= 賭資  # 輸掉下注金額
-        await interaction.response.send_message(f"你猜的總和是{大或小}\n骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
-    if not interaction.response.is_done():
-        await interaction.response.send_message(embed=embed)
+        base_points -= 賭資
+        result_message = f"你猜的總和是{大或小}\n骰子點數為:{dice_roll}, 總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
 
+    # 創建一個顯示結果的嵌入
+    result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
+    embeds.append(result_embed)
+
+    # 發送嵌入列表
+    await interaction.response.send_message(embeds=embeds)
 
 #全圍判斷式
 @client.tree.command()
 async def 全圍(interaction, 賭資: int):
     global base_points
     dice_roll = roll_dice()
+    # 創建一個嵌入列表來存儲每個骰子的嵌入
+    embeds = []
+    for i, result in enumerate(dice_roll, start=1):
+        embed = discord.Embed(title=f"Dice {i} point is {result}", color=0x00ff00)
+        embed.set_thumbnail(url=dice_gifs[result])
+        embeds.append(embed)
+
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
@@ -184,12 +198,16 @@ async def 全圍(interaction, 賭資: int):
         return
     if dice_roll[0] == dice_roll[1] == dice_roll[2]:
         base_points += int(賭資 * multipliers['全圍'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+        result_message = f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
     else:
         base_points -= 賭資  # 輸掉下注金額
-        await interaction.response.send_message(f"骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
-
-
+        result_message = f"骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
+    
+    # 創建一個顯示結果的嵌入
+    result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
+    embeds.append(result_embed)
+    # 發送嵌入列表
+    await interaction.response.send_message(embeds=embeds)
 
 #總和判斷式
 @client.tree.command()
@@ -197,6 +215,13 @@ async def 總和(interaction, 你指定的總和: int, 賭資: int):
     global base_points
     dice_roll = roll_dice()
     total = sum(dice_roll)
+    # 創建一個嵌入列表來存儲每個骰子的嵌入
+    embeds = []
+    for i, result in enumerate(dice_roll, start=1):
+        embed = discord.Embed(title=f"Dice {i} point is {result}", color=0x00ff00)
+        embed.set_thumbnail(url=dice_gifs[result])
+        embeds.append(embed)
+
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
@@ -205,11 +230,15 @@ async def 總和(interaction, 你指定的總和: int, 賭資: int):
         return
     if 你指定的總和 == total:
         base_points += int(賭資 * multipliers[你指定的總和])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的總和是{你指定的總和}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+        result_message = f"你猜的總和是{你指定的總和}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
     else:
         base_points -= 賭資  # 輸掉下注金額
-        await interaction.response.send_message(f"你猜的總和是{你指定的總和}\n骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
-
+        result_message = f"你猜的總和是{你指定的總和}\n骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
+    # 創建一個顯示結果的嵌入
+    result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
+    embeds.append(result_embed)
+    # 發送嵌入列表
+    await interaction.response.send_message(embeds=embeds)
 
 #單雙判斷式
 @client.tree.command()
@@ -217,6 +246,13 @@ async def 單雙(interaction, 你指定的種類: str, 賭資: int):
     global base_points
     dice_roll = roll_dice()
     total = sum(dice_roll)
+    # 創建一個嵌入列表來存儲每個骰子的嵌入
+    embeds = []
+    for i, result in enumerate(dice_roll, start=1):
+        embed = discord.Embed(title=f"Dice {i} point is {result}", color=0x00ff00)
+        embed.set_thumbnail(url=dice_gifs[result])
+        embeds.append(embed)
+
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
@@ -227,18 +263,29 @@ async def 單雙(interaction, 你指定的種類: str, 賭資: int):
         base_points += int(賭資 * multipliers[你指定的種類])  # 贏得下注金額,加上賠率獎勵
         await interaction.response.send_message(f"你猜的是{你指定的種類}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     if 你指定的種類 == '單' and total % 2 == 1:
-        await interaction.response.send_message(f"你猜的是{你指定的種類}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+        result_message = f"你猜的是{你指定的種類}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
     else:
         base_points -= 賭資  # 輸掉下注金額
-        await interaction.response.send_message(f"你猜的是{你指定的種類}\n骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        result_message = f"你猜的是{你指定的種類}\n骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
 
-
+    # 創建一個顯示結果的嵌入
+    result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
+    embeds.append(result_embed)
+    # 發送嵌入列表
+    await interaction.response.send_message(embeds=embeds)
 
 #圍骰判斷式
 @client.tree.command()
 async def 圍骰(interaction, 你指定的圍骰點數: int, 賭資: int):
     global base_points
     dice_roll = roll_dice()
+    # 創建一個嵌入列表來存儲每個骰子的嵌入
+    embeds = []
+    for i, result in enumerate(dice_roll, start=1):
+        embed = discord.Embed(title=f"Dice {i} point is {result}", color=0x00ff00)
+        embed.set_thumbnail(url=dice_gifs[result])
+        embeds.append(embed)
+
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
@@ -247,18 +294,29 @@ async def 圍骰(interaction, 你指定的圍骰點數: int, 賭資: int):
         return
     if dice_roll[0] == dice_roll[1] == dice_roll[2] == 你指定的圍骰點數:
         base_points += int(賭資 * multipliers[你指定的圍骰點數])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的圍骰為：{你指定的圍骰點數}{你指定的圍骰點數}{你指定的圍骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+        result_message = f"你猜的圍骰為：{你指定的圍骰點數}{你指定的圍骰點數}{你指定的圍骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
     else:
         base_points -= 賭資  # 輸掉下注金額
-        await interaction.response.send_message(f"你猜的圍骰為：{你指定的圍骰點數}{你指定的圍骰點數}{你指定的圍骰點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        result_message = f"你猜的圍骰為：{你指定的圍骰點數}{你指定的圍骰點數}{你指定的圍骰點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
   
-
+    # 創建一個顯示結果的嵌入
+    result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
+    embeds.append(result_embed)
+    # 發送嵌入列表
+    await interaction.response.send_message(embeds=embeds)
 
 #對子判斷式
 @client.tree.command()
 async def 對子(interaction, 你指定的對子點數: int, 賭資: int):
     global base_points
     dice_roll = roll_dice()
+    # 創建一個嵌入列表來存儲每個骰子的嵌入
+    embeds = []
+    for i, result in enumerate(dice_roll, start=1):
+        embed = discord.Embed(title=f"Dice {i} point is {result}", color=0x00ff00)
+        embed.set_thumbnail(url=dice_gifs[result])
+        embeds.append(embed)
+
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
@@ -273,18 +331,29 @@ async def 對子(interaction, 你指定的對子點數: int, 賭資: int):
         await interaction.response.send_message(f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")  
     elif dice_roll[1] == dice_roll[2] == 你指定的對子點數:
         base_points += int(賭資 * multipliers['對子'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")  
+        result_message = f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
     else:
         base_points -= 賭資  # 輸掉下注金額
-        await interaction.response.send_message(f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        result_message = f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
 
-
+    # 創建一個顯示結果的嵌入
+    result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
+    embeds.append(result_embed)
+    # 發送嵌入列表
+    await interaction.response.send_message(embeds=embeds)
 
 #單骰判斷式
 @client.tree.command()
 async def 單骰(interaction, 你指定的單骰點數: int, 賭資: int):
     global base_points
     dice_roll = roll_dice()
+    # 創建一個嵌入列表來存儲每個骰子的嵌入
+    embeds = []
+    for i, result in enumerate(dice_roll, start=1):
+        embed = discord.Embed(title=f"Dice {i} point is {result}", color=0x00ff00)
+        embed.set_thumbnail(url=dice_gifs[result])
+        embeds.append(embed)
+
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
@@ -299,18 +368,29 @@ async def 單骰(interaction, 你指定的單骰點數: int, 賭資: int):
         await interaction.response.send_message(f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")    
     elif dice_roll[2] == 你指定的單骰點數:
         base_points += int(賭資 * multipliers['單骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")   
+        result_message = f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"   
     else:
         base_points -= 賭資  # 輸掉下注金額
-        await interaction.response.send_message(f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        result_message = f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
 
-
+    # 創建一個顯示結果的嵌入
+    result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
+    embeds.append(result_embed)
+    # 發送嵌入列表
+    await interaction.response.send_message(embeds=embeds)
 
 #雙骰判斷式
 @client.tree.command()
 async def 雙骰(interaction, 你指定的雙骰點數: int, 賭資: int):
     global base_points
     dice_roll = roll_dice()
+    # 創建一個嵌入列表來存儲每個骰子的嵌入
+    embeds = []
+    for i, result in enumerate(dice_roll, start=1):
+        embed = discord.Embed(title=f"Dice {i} point is {result}", color=0x00ff00)
+        embed.set_thumbnail(url=dice_gifs[result])
+        embeds.append(embed)
+
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
@@ -325,12 +405,16 @@ async def 雙骰(interaction, 你指定的雙骰點數: int, 賭資: int):
         await interaction.response.send_message(f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     elif dice_roll[1] == dice_roll[2] == 你指定的雙骰點數  :
         base_points += int(賭資 * multipliers['雙骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+        result_message = f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
     else:
         base_points -= 賭資  # 輸掉下注金額
-        await interaction.response.send_message(f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        result_message = f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
 
-
+    # 創建一個顯示結果的嵌入
+    result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
+    embeds.append(result_embed)
+    # 發送嵌入列表
+    await interaction.response.send_message(embeds=embeds)
 
 
 #全骰判斷式
@@ -338,6 +422,13 @@ async def 雙骰(interaction, 你指定的雙骰點數: int, 賭資: int):
 async def 全骰(interaction, 你指定全骰的點數: int, 賭資: int):
     global base_points
     dice_roll = roll_dice()
+    # 創建一個嵌入列表來存儲每個骰子的嵌入
+    embeds = []
+    for i, result in enumerate(dice_roll, start=1):
+        embed = discord.Embed(title=f"Dice {i} point is {result}", color=0x00ff00)
+        embed.set_thumbnail(url=dice_gifs[result])
+        embeds.append(embed)
+
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
@@ -346,18 +437,29 @@ async def 全骰(interaction, 你指定全骰的點數: int, 賭資: int):
         return
     if dice_roll[0] == 你指定全骰的點數 == dice_roll[1] == dice_roll[2] :
         base_points += int(賭資 * multipliers['全骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的全骰點數為：{你指定全骰的點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")             
+        result_message = f"你猜的全骰點數為：{你指定全骰的點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"             
     else:
         base_points -= 賭資  # 輸掉下注金額
-        await interaction.response.send_message(f"你猜的全骰點數為：{你指定全骰的點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        result_message = f"你猜的全骰點數為：{你指定全骰的點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
 
-
+    # 創建一個顯示結果的嵌入
+    result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
+    embeds.append(result_embed)
+    # 發送嵌入列表
+    await interaction.response.send_message(embeds=embeds)
 
 #牌九式判斷式
 @client.tree.command()
 async def 牌九式(interaction, 你指定的點數一: int, 你指定的點數二: int, 賭資: int):
     global base_points
     dice_roll = roll_dice() 
+    # 創建一個嵌入列表來存儲每個骰子的嵌入
+    embeds = []
+    for i, result in enumerate(dice_roll, start=1):
+        embed = discord.Embed(title=f"Dice {i} point is {result}", color=0x00ff00)
+        embed.set_thumbnail(url=dice_gifs[result])
+        embeds.append(embed)
+
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
@@ -381,12 +483,16 @@ async def 牌九式(interaction, 你指定的點數一: int, 你指定的點數�
         await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
     elif dice_roll[1] == 你指定的點數二 and dice_roll[2] == 你指定的點數一 :
         base_points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
+        result_message = f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
     else:
         base_points -= 賭資  # 輸掉下注金額
-        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。")
+        result_message = f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
 
-
+    # 創建一個顯示結果的嵌入
+    result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
+    embeds.append(result_embed)
+    # 發送嵌入列表
+    await interaction.response.send_message(embeds=embeds)
 
 #rule embed加下拉式表單
 @client.tree.command()
@@ -401,4 +507,4 @@ async def rule(interaction):
 
         
 
-client.run('MTEyMjkwMTQzNjk5NzU3ODc5Mg.GzZDOV.2abIBqnaHbiEkASJp31ox0NOdfw70NszKdF3yo')
+client.run('your token')
