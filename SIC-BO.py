@@ -4,13 +4,27 @@ import random
 import discord
 from discord import app_commands
 import datetime
-
+import mysql.connector
 
 # API_KEY = AIzaSyBoC7nd0DCBg5RQSSmg4sh6YdE2whNfNfM
-MY_GUILD = discord.Object(id= 'add your guild id')  # replace with your guild id
+MY_GUILD = discord.Object(id= '991905864162226177')  # replace with your guild id
 tenor_api_key = "AIzaSyBoC7nd0DCBg5RQSSmg4sh6YdE2whNfNfM"
 
 base_points = 1000
+
+mydb = mysql.connector.connect(
+  host="localhost",        # 例如 "localhost"
+  user="root",    # 例如 "root"
+  password="frank0403",
+  database="discord_player"
+)
+
+mycursor = mydb.cursor()
+
+mycursor.execute("SELECT * FROM player")
+myresult = mycursor.fetchall()
+
+
 
 
 class MyClient(discord.Client):
@@ -78,6 +92,7 @@ client = MyClient(intents=intents)
 async def on_ready():
     print(f'Logged in as {client.user} (ID: {client.user.id})')
     print('------')
+    print(myresult)
 
 
 @client.event
@@ -507,4 +522,4 @@ async def rule(interaction):
 
         
 
-client.run('your token')
+client.run('MTEyMjkwMTQzNjk5NzU3ODc5Mg.GJZ2Lz.BVk9hl6nzC64KY5L15pOZmJpJQKqbEV_7vhamY')
