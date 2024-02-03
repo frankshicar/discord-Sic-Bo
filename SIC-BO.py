@@ -5,9 +5,16 @@ import discord
 from discord import app_commands
 import datetime
 import mysql.connector
+import yaml
 
+
+# 讀取 config.yml 文件
+with open('config.yml', 'r') as file:
+    config = yaml.safe_load(file)
+
+bot_token = config['bot_token']
+MY_GUILD = discord.Object(id=config['guild_id'])
 # API_KEY = AIzaSyBoC7nd0DCBg5RQSSmg4sh6YdE2whNfNfM
-MY_GUILD = discord.Object(id= '991905864162226177')  # replace with your guild id
 tenor_api_key = "AIzaSyBoC7nd0DCBg5RQSSmg4sh6YdE2whNfNfM"
 
 base_points = 1000
@@ -522,4 +529,4 @@ async def rule(interaction):
 
         
 
-client.run('MTEyMjkwMTQzNjk5NzU3ODc5Mg.GJZ2Lz.BVk9hl6nzC64KY5L15pOZmJpJQKqbEV_7vhamY')
+client.run('bot_token')
