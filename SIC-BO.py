@@ -17,7 +17,7 @@ MY_GUILD = discord.Object(id=config['guild_id'])
 # API_KEY = AIzaSyBoC7nd0DCBg5RQSSmg4sh6YdE2whNfNfM
 tenor_api_key = "AIzaSyBoC7nd0DCBg5RQSSmg4sh6YdE2whNfNfM"
 
-base_points = 1000
+# base_points = 1000
 
 mydb = mysql.connector.connect(
   host="localhost",        # 例如 "localhost"
@@ -28,9 +28,10 @@ mydb = mysql.connector.connect(
 
 mycursor = mydb.cursor()
 
-mycursor.execute("SELECT * FROM player")
+mycursor.execute("SELECT * FROM players")
 myresult = mycursor.fetchall()
 
+logged_in_users = {}  # key: Discord ID, value: username
 
 
 
@@ -43,6 +44,7 @@ class MyClient(discord.Client):
         self.tree.copy_global_to(guild=MY_GUILD)
         await self.tree.sync(guild=MY_GUILD)
     
+
 
 
 #下拉式表單
@@ -93,6 +95,31 @@ class ButtonView(discord.ui.View):
 
 intents = discord.Intents.all()
 client = MyClient(intents=intents)
+
+# 注冊或登錄用戶
+@client.tree.command()
+async def register(interaction: discord.Interaction, username: str):
+    mycursor = mydb.cursor()
+    mycursor.execute("SELECT * FROM players WHERE username = %s", (username,))
+    result = mycursor.fetchone()
+    if result:
+        await interaction.response.send_message(f"用戶名 {username} 已存在。")
+    else:
+        mycursor.execute("INSERT INTO players (username, points) VALUES (%s, %s)", (username, 1000))
+        mydb.commit()
+        await interaction.response.send_message(f"用戶名 {username} 已註冊。")
+
+
+# 查詢積分
+@client.tree.command()
+async def points(interaction: discord.Interaction, username: str):
+    mycursor = mydb.cursor()
+    mycursor.execute("SELECT points FROM players WHERE username = %s", (username,))
+    result = mycursor.fetchone()
+    if result:
+        await interaction.response.send_message(f"用戶名 {username} 的積分是: {result[0]}")
+    else:
+        await interaction.response.send_message(f"找不到用戶名 {username}。")
 
 
 @client.event
@@ -528,5 +555,4 @@ async def rule(interaction):
 )
 
         
-
-client.run('bot_token')
+client.run(bot_token)
