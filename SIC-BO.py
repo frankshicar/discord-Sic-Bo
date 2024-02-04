@@ -17,7 +17,6 @@ MY_GUILD = discord.Object(id=config['guild_id'])
 # API_KEY = AIzaSyBoC7nd0DCBg5RQSSmg4sh6YdE2whNfNfM
 tenor_api_key = "AIzaSyBoC7nd0DCBg5RQSSmg4sh6YdE2whNfNfM"
 
-# base_points = 1000
 
 mydb = mysql.connector.connect(
   host="localhost",        # 例如 "localhost"
@@ -32,7 +31,7 @@ mycursor.execute("SELECT * FROM players")
 myresult = mycursor.fetchall()
 
 logged_in_users = {}  # key: Discord ID, value: username
-
+user_points = {}
 
 
 class MyClient(discord.Client):
@@ -124,14 +123,15 @@ async def points(interaction: discord.Interaction, username: str):
 @client.tree.command()
 async def login(interaction: discord.Interaction, username: str):
     mycursor = mydb.cursor()
-    mycursor.execute("SELECT * FROM players WHERE username = %s", (username,))
+    mycursor.execute("SELECT points FROM players WHERE username = %s", (username,))
     result = mycursor.fetchone()
     if result:
-        # 登錄成功，將用戶添加到 logged_in_users 字典
         logged_in_users[interaction.user.id] = username
+        user_points[interaction.user.id] = result[0]  # 儲存用戶的 points
         await interaction.response.send_message(f"用戶 {username} 已成功登錄。")
     else:
         await interaction.response.send_message("用戶名不存在。請先註冊。")
+
 
 
 @client.event
@@ -158,7 +158,7 @@ async def on_member_join(member):
     await channel.send(embed=embed)
 
 # 初始化基礎點數
-base_points = 1000
+points = 1000
 
 # 定義各種玩法的賠率
 multipliers = {
@@ -206,7 +206,7 @@ def roll_dice():
 #比大小判斷式
 @client.tree.command()
 async def 大小(interaction, 大或小: str, 賭資: int):
-    global base_points
+    global points
     dice_roll = roll_dice()
     total = sum(dice_roll)
 
@@ -216,6 +216,7 @@ async def 大小(interaction, 大或小: str, 賭資: int):
         return
 
     username = logged_in_users[user_id]
+    points = user_points[interaction.user.id]
     # 創建一個嵌入列表來存儲每個骰子的嵌入
     embeds = []
     for i, result in enumerate(dice_roll, start=1):
@@ -227,20 +228,20 @@ async def 大小(interaction, 大或小: str, 賭資: int):
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
-    if base_points < 賭資:
+    if points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return
 
     if (大或小 == '大' and total >= 11 and total <= 17) or (大或小 == '小' and total >= 4 and total <= 10):
-        base_points += int(賭資 * multipliers[大或小])
-        result_message = f"你猜的總和是{大或小}\n骰子點數為:{dice_roll}, 總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers[大或小])
+        result_message = f"你猜的總和是{大或小}\n骰子點數為:{dice_roll}, 總點數為:{total}\n恭喜,你贏了!你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
 
     else:
-        base_points -= 賭資
-        result_message = f"你猜的總和是{大或小}\n骰子點數為:{dice_roll}, 總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points -= 賭資
+        result_message = f"你猜的總和是{大或小}\n骰子點數為:{dice_roll}, 總點數為:{total}\n很遺憾,你輸了,你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
 
     # 創建一個顯示結果的嵌入
@@ -253,7 +254,7 @@ async def 大小(interaction, 大或小: str, 賭資: int):
 #全圍判斷式
 @client.tree.command()
 async def 全圍(interaction, 賭資: int):
-    global base_points
+    global points
     dice_roll = roll_dice()
 
     user_id = interaction.user.id
@@ -262,6 +263,8 @@ async def 全圍(interaction, 賭資: int):
         return
 
     username = logged_in_users[user_id]
+    points = user_points[interaction.user.id]
+
     # 創建一個嵌入列表來存儲每個骰子的嵌入
     embeds = []
     for i, result in enumerate(dice_roll, start=1):
@@ -272,18 +275,18 @@ async def 全圍(interaction, 賭資: int):
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
-    if base_points < 賭資:
+    if points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return
     if dice_roll[0] == dice_roll[1] == dice_roll[2]:
-        base_points += int(賭資 * multipliers['全圍'])  # 贏得下注金額,加上賠率獎勵
-        result_message = f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['全圍'])  # 贏得下注金額,加上賠率獎勵
+        result_message = f"骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     else:
-        base_points -= 賭資  # 輸掉下注金額
-        result_message = f"骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points -= 賭資  # 輸掉下注金額
+        result_message = f"骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     # 創建一個顯示結果的嵌入
     result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
@@ -294,7 +297,7 @@ async def 全圍(interaction, 賭資: int):
 #總和判斷式
 @client.tree.command()
 async def 總和(interaction, 你指定的總和: int, 賭資: int):
-    global base_points
+    global points
     dice_roll = roll_dice()
     total = sum(dice_roll)
 
@@ -314,18 +317,18 @@ async def 總和(interaction, 你指定的總和: int, 賭資: int):
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
-    if base_points < 賭資:
+    if points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return
     if 你指定的總和 == total:
-        base_points += int(賭資 * multipliers[你指定的總和])  # 贏得下注金額,加上賠率獎勵
-        result_message = f"你猜的總和是{你指定的總和}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers[你指定的總和])  # 贏得下注金額,加上賠率獎勵
+        result_message = f"你猜的總和是{你指定的總和}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     else:
-        base_points -= 賭資  # 輸掉下注金額
-        result_message = f"你猜的總和是{你指定的總和}\n骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points -= 賭資  # 輸掉下注金額
+        result_message = f"你猜的總和是{你指定的總和}\n骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     # 創建一個顯示結果的嵌入
     result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
@@ -336,11 +339,12 @@ async def 總和(interaction, 你指定的總和: int, 賭資: int):
 #單雙判斷式
 @client.tree.command()
 async def 單雙(interaction, 你指定的種類: str, 賭資: int):
-    global base_points
+    global points
     dice_roll = roll_dice()
     total = sum(dice_roll)
 
     user_id = interaction.user.id
+    points = user_points[interaction.user.id]
     if user_id not in logged_in_users:
         await interaction.response.send_message("您必須先登錄才能使用此命令。")
         return
@@ -356,22 +360,22 @@ async def 單雙(interaction, 你指定的種類: str, 賭資: int):
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
-    if base_points < 賭資:
+    if points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return
     if 你指定的種類 == '雙' and total % 2 == 0:
-        base_points += int(賭資 * multipliers[你指定的種類])  # 贏得下注金額,加上賠率獎勵
-        result_message = f"你猜的是{你指定的種類}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers[你指定的種類])  # 贏得下注金額,加上賠率獎勵
+        result_message = f"你猜的是{你指定的種類}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     if 你指定的種類 == '單' and total % 2 == 1:
-        result_message = f"你猜的是{你指定的種類}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        result_message = f"你猜的是{你指定的種類}\n骰子點數為:{dice_roll},總點數為:{total}\n恭喜,你贏了!你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     else:
-        base_points -= 賭資  # 輸掉下注金額
-        result_message = f"你猜的是{你指定的種類}\n骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points -= 賭資  # 輸掉下注金額
+        result_message = f"你猜的是{你指定的種類}\n骰子點數為:{dice_roll},總點數為:{total}\n很遺憾,你輸了,你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
 
     # 創建一個顯示結果的嵌入
@@ -383,7 +387,7 @@ async def 單雙(interaction, 你指定的種類: str, 賭資: int):
 #圍骰判斷式
 @client.tree.command()
 async def 圍骰(interaction, 你指定的圍骰點數: int, 賭資: int):
-    global base_points
+    global points
     dice_roll = roll_dice()
 
     user_id = interaction.user.id
@@ -392,6 +396,7 @@ async def 圍骰(interaction, 你指定的圍骰點數: int, 賭資: int):
         return
 
     username = logged_in_users[user_id]
+    points = user_points[interaction.user.id]
     # 創建一個嵌入列表來存儲每個骰子的嵌入
     embeds = []
     for i, result in enumerate(dice_roll, start=1):
@@ -402,18 +407,18 @@ async def 圍骰(interaction, 你指定的圍骰點數: int, 賭資: int):
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
-    if base_points < 賭資:
+    if points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return
     if dice_roll[0] == dice_roll[1] == dice_roll[2] == 你指定的圍骰點數:
-        base_points += int(賭資 * multipliers[你指定的圍骰點數])  # 贏得下注金額,加上賠率獎勵
-        result_message = f"你猜的圍骰為：{你指定的圍骰點數}{你指定的圍骰點數}{你指定的圍骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers[你指定的圍骰點數])  # 贏得下注金額,加上賠率獎勵
+        result_message = f"你猜的圍骰為：{你指定的圍骰點數}{你指定的圍骰點數}{你指定的圍骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     else:
-        base_points -= 賭資  # 輸掉下注金額
-        result_message = f"你猜的圍骰為：{你指定的圍骰點數}{你指定的圍骰點數}{你指定的圍骰點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points -= 賭資  # 輸掉下注金額
+        result_message = f"你猜的圍骰為：{你指定的圍骰點數}{你指定的圍骰點數}{你指定的圍骰點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
   
     # 創建一個顯示結果的嵌入
@@ -425,7 +430,7 @@ async def 圍骰(interaction, 你指定的圍骰點數: int, 賭資: int):
 #對子判斷式
 @client.tree.command()
 async def 對子(interaction, 你指定的對子點數: int, 賭資: int):
-    global base_points
+    global points
     dice_roll = roll_dice()
 
     user_id = interaction.user.id
@@ -434,6 +439,7 @@ async def 對子(interaction, 你指定的對子點數: int, 賭資: int):
         return
 
     username = logged_in_users[user_id]
+    points = user_points[interaction.user.id]
     # 創建一個嵌入列表來存儲每個骰子的嵌入
     embeds = []
     for i, result in enumerate(dice_roll, start=1):
@@ -444,28 +450,28 @@ async def 對子(interaction, 你指定的對子點數: int, 賭資: int):
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
-    if base_points < 賭資:
+    if points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return
     if dice_roll[0] == dice_roll[1] == 你指定的對子點數:
-        base_points += int(賭資 * multipliers['對子'])  # 贏得下注金額,加上賠率獎勵
-        result_message = f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"        
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['對子'])  # 贏得下注金額,加上賠率獎勵
+        result_message = f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。"        
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     elif dice_roll[0] == dice_roll[2] == 你指定的對子點數:
-        base_points += int(賭資 * multipliers['對子'])  # 贏得下注金額,加上賠率獎勵
-        result_message = f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"  
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['對子'])  # 贏得下注金額,加上賠率獎勵
+        result_message = f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。"  
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     elif dice_roll[1] == dice_roll[2] == 你指定的對子點數:
-        base_points += int(賭資 * multipliers['對子'])  # 贏得下注金額,加上賠率獎勵
-        result_message = f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['對子'])  # 贏得下注金額,加上賠率獎勵
+        result_message = f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     else:
-        base_points -= 賭資  # 輸掉下注金額
-        result_message = f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points -= 賭資  # 輸掉下注金額
+        result_message = f"你猜的對子為：{你指定的對子點數}{你指定的對子點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     # 創建一個顯示結果的嵌入
     result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
@@ -476,7 +482,7 @@ async def 對子(interaction, 你指定的對子點數: int, 賭資: int):
 #單骰判斷式
 @client.tree.command()
 async def 單骰(interaction, 你指定的單骰點數: int, 賭資: int):
-    global base_points
+    global points
     dice_roll = roll_dice()
 
     user_id = interaction.user.id
@@ -485,6 +491,7 @@ async def 單骰(interaction, 你指定的單骰點數: int, 賭資: int):
         return
 
     username = logged_in_users[user_id]
+    points = user_points[interaction.user.id]
     # 創建一個嵌入列表來存儲每個骰子的嵌入
     embeds = []
     for i, result in enumerate(dice_roll, start=1):
@@ -495,28 +502,28 @@ async def 單骰(interaction, 你指定的單骰點數: int, 賭資: int):
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
-    if base_points < 賭資:
+    if points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return
     if dice_roll[0] == 你指定的單骰點數:
-        base_points += int(賭資 * multipliers['單骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")  
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['單骰'])  # 贏得下注金額,加上賠率獎勵
+        await interaction.response.send_message(f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。")  
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()      
     elif dice_roll[1] == 你指定的單骰點數:
-        base_points += int(賭資 * multipliers['單骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")    
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['單骰'])  # 贏得下注金額,加上賠率獎勵
+        await interaction.response.send_message(f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。")    
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     elif dice_roll[2] == 你指定的單骰點數:
-        base_points += int(賭資 * multipliers['單骰'])  # 贏得下注金額,加上賠率獎勵
-        result_message = f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"   
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['單骰'])  # 贏得下注金額,加上賠率獎勵
+        result_message = f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。"   
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     else:
-        base_points -= 賭資  # 輸掉下注金額
-        result_message = f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points -= 賭資  # 輸掉下注金額
+        result_message = f"你猜的單骰點數為：{你指定的單骰點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     # 創建一個顯示結果的嵌入
     result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
@@ -527,7 +534,7 @@ async def 單骰(interaction, 你指定的單骰點數: int, 賭資: int):
 #雙骰判斷式
 @client.tree.command()
 async def 雙骰(interaction, 你指定的雙骰點數: int, 賭資: int):
-    global base_points
+    global points
     dice_roll = roll_dice()
 
     user_id = interaction.user.id
@@ -536,6 +543,7 @@ async def 雙骰(interaction, 你指定的雙骰點數: int, 賭資: int):
         return
 
     username = logged_in_users[user_id]
+    points = user_points[interaction.user.id]
     # 創建一個嵌入列表來存儲每個骰子的嵌入
     embeds = []
     for i, result in enumerate(dice_roll, start=1):
@@ -546,28 +554,28 @@ async def 雙骰(interaction, 你指定的雙骰點數: int, 賭資: int):
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
-    if base_points < 賭資:
+    if points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return
     if dice_roll[0]== dice_roll[1] == 你指定的雙骰點數 :
-        base_points += int(賭資 * multipliers['雙骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['雙骰'])  # 贏得下注金額,加上賠率獎勵
+        await interaction.response.send_message(f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。")
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     elif dice_roll[0] == dice_roll[2] == 你指定的雙骰點數 :
-        base_points += int(賭資 * multipliers['雙骰'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['雙骰'])  # 贏得下注金額,加上賠率獎勵
+        await interaction.response.send_message(f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。")
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     elif dice_roll[1] == dice_roll[2] == 你指定的雙骰點數  :
-        base_points += int(賭資 * multipliers['雙骰'])  # 贏得下注金額,加上賠率獎勵
-        result_message = f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['雙骰'])  # 贏得下注金額,加上賠率獎勵
+        result_message = f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     else:
-        base_points -= 賭資  # 輸掉下注金額
-        result_message = f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points -= 賭資  # 輸掉下注金額
+        result_message = f"你猜的雙骰點數為：{你指定的雙骰點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     # 創建一個顯示結果的嵌入
     result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
@@ -579,7 +587,7 @@ async def 雙骰(interaction, 你指定的雙骰點數: int, 賭資: int):
 #全骰判斷式
 @client.tree.command()
 async def 全骰(interaction, 你指定全骰的點數: int, 賭資: int):
-    global base_points
+    global points
     dice_roll = roll_dice()
 
     user_id = interaction.user.id
@@ -588,6 +596,7 @@ async def 全骰(interaction, 你指定全骰的點數: int, 賭資: int):
         return
 
     username = logged_in_users[user_id]
+    points = user_points[interaction.user.id]
     # 創建一個嵌入列表來存儲每個骰子的嵌入
     embeds = []
     for i, result in enumerate(dice_roll, start=1):
@@ -598,18 +607,18 @@ async def 全骰(interaction, 你指定全骰的點數: int, 賭資: int):
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
-    if base_points < 賭資:
+    if points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return
     if dice_roll[0] == 你指定全骰的點數 == dice_roll[1] == dice_roll[2] :
-        base_points += int(賭資 * multipliers['全骰'])  # 贏得下注金額,加上賠率獎勵
-        result_message = f"你猜的全骰點數為：{你指定全骰的點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"             
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['全骰'])  # 贏得下注金額,加上賠率獎勵
+        result_message = f"你猜的全骰點數為：{你指定全骰的點數}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。"             
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     else:
-        base_points -= 賭資  # 輸掉下注金額
-        result_message = f"你猜的全骰點數為：{你指定全骰的點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points -= 賭資  # 輸掉下注金額
+        result_message = f"你猜的全骰點數為：{你指定全骰的點數}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     # 創建一個顯示結果的嵌入
     result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
@@ -620,7 +629,7 @@ async def 全骰(interaction, 你指定全骰的點數: int, 賭資: int):
 #牌九式判斷式
 @client.tree.command()
 async def 牌九式(interaction, 你指定的點數一: int, 你指定的點數二: int, 賭資: int):
-    global base_points
+    global points
     dice_roll = roll_dice() 
 
     user_id = interaction.user.id
@@ -629,6 +638,7 @@ async def 牌九式(interaction, 你指定的點數一: int, 你指定的點數�
         return
 
     username = logged_in_users[user_id]
+    points = user_points[interaction.user.id]
     # 創建一個嵌入列表來存儲每個骰子的嵌入
     embeds = []
     for i, result in enumerate(dice_roll, start=1):
@@ -639,43 +649,43 @@ async def 牌九式(interaction, 你指定的點數一: int, 你指定的點數�
     if 賭資 <= 0:
         await interaction.response.send_message("下注金額必須大於零。")
         return
-    if base_points < 賭資:
+    if points < 賭資:
         await interaction.response.send_message("你的基礎點數不足以進行這個下注。")
         return   
     if dice_roll[0] == 你指定的點數一 and dice_roll[1] == 你指定的點數二:
-        base_points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
+        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。")
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     elif dice_roll[0] == 你指定的點數一 and dice_roll[2] == 你指定的點數二:
-        base_points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
+        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。")
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     elif dice_roll[1] == 你指定的點數一 and dice_roll[2] == 你指定的點數二:
-        base_points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
+        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。")
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     elif dice_roll[0] == 你指定的點數二 and dice_roll[1] == 你指定的點數一:
-        base_points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
+        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。")
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     elif dice_roll[0] == 你指定的點數二 and dice_roll[2] == 你指定的點數一 :
-        base_points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
-        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。")
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
+        await interaction.response.send_message(f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。")
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     elif dice_roll[1] == 你指定的點數二 and dice_roll[2] == 你指定的點數一 :
-        base_points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
-        result_message = f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points += int(賭資 * multipliers['牌九式'])  # 贏得下注金額,加上賠率獎勵
+        result_message = f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n恭喜,你贏了!你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     else:
-        base_points -= 賭資  # 輸掉下注金額
-        result_message = f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {base_points} 基礎點數。"
-        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (base_points, username))
+        points -= 賭資  # 輸掉下注金額
+        result_message = f"你猜的牌九式是:{你指定的點數一},{你指定的點數二}\n骰子點數為:{dice_roll}\n很遺憾,你輸了,你現在有 {points} 基礎點數。"
+        mycursor.execute("UPDATE players SET points = %s WHERE username = %s", (points, username))
         mydb.commit()
     # 創建一個顯示結果的嵌入
     result_embed = discord.Embed(description=result_message, color=discord.Color.blue())
