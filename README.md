@@ -8,3 +8,25 @@
 
 我的目標是創造一種輕鬆愉快的社交遊戲體驗，使玩家可以在享受遊戲的同時，也能與朋友保持互動。
 
+## 專案功能
+#### 使用者
+- 註冊帳號
+- 登入帳號
+- 查看點數
+- 查看遊戲規則
+- 選擇要玩的玩法並下注
+
+
+## 如何使用
+### 操作程式
+1. 資料庫設定
+    1. 先至[mysql官網](https://dev.mysql.com/downloads/mysql/) 下載mysql，mac須再下載[mysql workbench](https://dev.mysql.com/downloads/workbench/)
+    2. 建立一個名為`discord_players`的資料庫
+    3. 在`discord_players`資料庫中建立`playsers`的資料表，並在資料表中建立`username`(主鍵)及`points`兩個欄位
+2. discord 機器人建立
+    1. 先至[discord官網](https://discord.com/)註冊discrod帳號
+    2. 至[discord developers網站](https://discord.com/developers/applications)登入您的discord帳號
+    3. 參考這篇文章[discord 機器人建立](https://ithelp.ithome.com.tw/articles/10319049)來創建您個人的機器人
+3. 程式運行
+
+4. 
