@@ -27,6 +27,29 @@
     1. 先至[discord官網](https://discord.com/)註冊discrod帳號
     2. 至[discord developers網站](https://discord.com/developers/applications)登入您的discord帳號
     3. 參考這篇文章[discord 機器人建立](https://ithelp.ithome.com.tw/articles/10319049)來創建您個人的機器人
-3. 程式運行
+3. 套件安裝
+    1. 確認是否安裝python
+       - mac: `python3 --version` 或 `pip3 --version`
+       - windows: `python --version` 或 `pip --version`
+    2. 安裝discord.py
+       - mac: `pip3 install discord.py`
+       - windows: `pip install discord.py`
+    3. 安裝mysql-connector-python
+       - mac: `pip3 install mysql-connector-python`
+       - windows: `pip install mysql-connector-python`
+    4. 安裝pyyaml
+       - mac: `pip3 install pyyaml`
+       - windows: `pip install pyyaml`
+4. 程式運行
+    1. Fork 這個專案
+    2. 複製你剛剛 Fork 的專案至本地
+    3. 打開SIC-BO.py
+    4. 創建`config.yml`檔案
+    5. 在`config.yml`檔案中輸入
+      ```
+      bot_token: "your_bot_token"
+      guild_id: "your_guild_id"
+      ```
+      
 
-4. 
+
