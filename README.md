@@ -51,5 +51,45 @@
       guild_id: "your_guild_id"
       ```
       
+## 如何玩
+### 1. 註冊帳號
+首先輸入`/register`註冊一個使用者 
+<br>
+<img width="302" alt="截圖 2024-02-19 下午4 16 18" src="https://github.com/frankshicar/discord-Sic-Bo/assets/93965977/7557ac8a-7638-4b57-b5ab-5d45afeb869c">
+<br>
+<br>
+<img width="293" alt="截圖 2024-02-19 下午4 10 12" src="https://github.com/frankshicar/discord-Sic-Bo/assets/93965977/279fc7bc-c04b-41d4-bb47-95f0cc142da7">
+<br>
+
+### 2. 登入
+將註冊過後的使用`/login`輸入用戶名進行登入
+<br>
+<img width="288" alt="截圖 2024-02-19 下午4 17 12" src="https://github.com/frankshicar/discord-Sic-Bo/assets/93965977/3323e886-e390-487d-93eb-502f2e1a24d7">
+<br>
+<br>
+<img width="279" alt="截圖 2024-02-19 下午4 19 01" src="https://github.com/frankshicar/discord-Sic-Bo/assets/93965977/20fc9151-eef6-4aec-8b1d-c75e73fb2868">
+<br>
+
+### 3. 查看遊戲規則
+使用`/rule`查看不同玩法的規則及賠率
+<br>
+<img width="489" alt="截圖 2024-02-19 下午4 20 51" src="https://github.com/frankshicar/discord-Sic-Bo/assets/93965977/95aef62f-66a1-4b32-b50b-b5f7e2828a57">
+<br>
+
+### 4. 查看分數
+使用`/points輸入玩家名稱查看玩家分數
+<br>
+<img width="302" alt="截圖 2024-02-19 下午4 23 06" src="https://github.com/frankshicar/discord-Sic-Bo/assets/93965977/8b7e812f-0792-4c32-9214-c8e1962eb877">
+<br>
+
+### 5. 根據規則來選擇玩法
+以大小當作範例
+使用`/大小`輸入你要猜大或小病輸入你要下注多少點
+<br>
+<img width="333" alt="截圖 2024-02-19 下午4 26 18" src="https://github.com/frankshicar/discord-Sic-Bo/assets/93965977/3267d5f4-999a-455b-b578-4d0cda93ff58">
+<br>
+<br>
+<img width="356" alt="截圖 2024-02-19 下午4 26 48" src="https://github.com/frankshicar/discord-Sic-Bo/assets/93965977/d0cba31e-ae6b-4b8c-bb79-147120e2ed8e">
+<br>
 
 
